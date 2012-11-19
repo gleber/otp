@@ -6378,36 +6378,18 @@ call_fun(Process* p,		/* Current process. */
 	    p->fvalue = TUPLE2(hp, fun, args);
 	    return NULL;
 	}
-    } else if (hdr == make_arityval(2)) {
+    } else if (is_arity_value(hdr)) {
 	Eterm* tp;
 	Export* ep;
 	Eterm module;
 
 	tp = tuple_val(fun);
 	module = tp[1];
-	function = tp[2];
-	if (!is_atom(module) || !is_atom(function)) {
+	function = am_call;
+	if (!is_atom(module)) {
 	    goto badfun;
 	}
-
-	/*
-	 * If this is the first time a tuple fun is used,
-	 * send a warning to the logger.
-	 */
-	if (erts_smp_atomic_xchg_nob(&warned_for_tuple_funs,
-				     (erts_aint_t) 1) == 0) {
-	    erts_dsprintf_buf_t* dsbufp;
-
-	    dsbufp = erts_create_logger_dsbuf();
-	    erts_dsprintf(dsbufp, "Call to tuple fun {%T,%T}.\n\n"
-			  "Tuple funs are deprecated and will be removed "
-			  "in R16. Use \"fun M:F/A\" instead, for example "
-			  "\"fun %T:%T/%d\".\n\n"
-			  "(This warning will only be shown the first time "
-			  "a tuple fun is called.)\n",
-			  module, function, module, function, arity);
-	    erts_send_warning_to_logger(p->group_leader, dsbufp);
-	}
+	reg[arity++] = fun;
 
 	if ((ep = erts_find_export_entry(module, function, arity)) == NULL) {
 	    ep = erts_find_export_entry(erts_proc_get_error_handler(p),
